@@ -33,9 +33,8 @@ void set_time(uint Year, uint Month, uint Day, uint Hour, uint Minute, uint Seco
 	time.tm_min  = Minute;
 	time.tm_sec  = Second;
 
-	if (time.tm_year < 0)
-	{
-	    time.tm_year = 0;
+	if (time.tm_year < 0) {
+		time.tm_year = 0;
 	}
 
 	time_t t = mktime(&time);
@@ -63,12 +62,7 @@ void process_data(dwin_serial *instance, DATA_TYPE type){
 
 
 
-int main(int argc,char** argv)
-{
-	static struct pollfd_t *polls;
-	static uint poll_count;
-
-
+int main(int argc,char** argv){
 	serial *port = new serial(MODEM, 115200, 'n', true, false, 100, 10);
 //	port->debug = true;
 	dwin_serial *ds = new dwin_serial();
