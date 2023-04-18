@@ -281,14 +281,14 @@ void serial::timer_tick(){
 	uint32_t	buflen=0;
 	int 		ret;
 
-	if(debug){
+/*	if(debug){
 		//	addtime();
 		printf("\nserial: timer_tick: %lu ms ",  GetTimeTicks());
 		itimerspec timeouts;
 		timerfd_gettime(timer_fd, &timeouts);
 		printf("timer settings interval %lu left %lu ms", timeouts.it_interval.tv_nsec/1000000, timeouts.it_value.tv_nsec/1000000);
-		printf(" state %s", strSerialStatus[state]);
-	}
+		printf(" state %i - %s", state, strSerialStatus[state]);
+	}*/
 	//прочитаем, сколько раз истек таймер, чтобы обнулить признак готовности
 	if (read(timer_fd, &expirations, sizeof(expirations)) <= 0)
 //		if(debug) debug_output(LOG_ERR, 1, "serial: read from timerfd failed");

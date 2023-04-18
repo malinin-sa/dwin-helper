@@ -86,6 +86,7 @@ public:
 	static void port_poll_handler(int fd, short int revents, void *param);
 	static void port_timerfd_poll_handler(int fd, short int revents, void *param);
 
+	void set_poll_time(uint poll_time)	{poll_cycle_time_ms = poll_time;}
 	void set_timer_mks(ulong timeout_mks);
 	void set_char_interval();
 	void set_char_interval_mks(ulong	timeout_mks);

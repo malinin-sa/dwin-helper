@@ -6,10 +6,15 @@
  */
 
 #include "dwinserial.h"
+#include "time.h"
+#include <cstring>
 
 dwin_serial::dwin_serial() {
-	// TODO Auto-generated constructor stub
-
+	state = IDLE;
+	on_data_recived = NULL;
+	touch_touched = false;
+	touch_x = touch_y = 0;
+	backlight_brightnes = 100;
 }
 
 dwin_serial::~dwin_serial() {
@@ -17,7 +22,33 @@ dwin_serial::~dwin_serial() {
 }
 
 int dwin_serial::request(int retry, uint8_t *buffer, uint bufsize) {
+//	printf("\ndwin_serial: request, state %i", state);
+	switch (state) {
+	case IDLE:
+		return 0;
+	case SET_BACKLIGHT:
+		printf("\ndwin_serial: Update RTC");
+		state = IDLE;
+		return set_backlight_request(buffer, bufsize);
+	case UPDATE_RTC:
+		printf("\ndwin_serial: Update RTC");
+		state = IDLE;
+		return set_rtc_request(buffer, bufsize);
+	}
 	return 0;
+}
+
+uint dwin_serial::set_backlight_request(uint8_t *buf, uint bufsize) {
+	uint i=0;
+	if (bufsize < 6)
+		return 0;
+	buf[i++] = 0x5a;
+	buf[i++] = 0xa5;
+	buf[i++] = 0x03;
+	buf[i++] = 0x04;
+	buf[i++] = backlight_brightnes > 100 ? 100 : backlight_brightnes;
+	buf[i++] = calc_crc(buf+2, i-2);
+	return i;
 }
 
 void dwin_serial::result(uint8_t *buffer, uint length) {
@@ -81,3 +112,33 @@ uint dwin_serial::estimated_resp_size(uint8_t *buffer, uint length) {
 		return 0;
 	return 3 + buffer[2];
 }
+
+//создает запрос на запись текущего системного времени в RTC
+uint dwin_serial::set_rtc_request(uint8_t *buf, uint bufsize){
+	if (bufsize < 11)
+		return 0;
+/*
+	//set time 16.04.2023 23:41:55
+	uint8_t test[] = {0x5a, 0xa5, 0x08, 0x02, 0x17, 0x03, 0x10, 0x17, 0x29, 0x37, 0xab};
+	memcpy(buf, test, sizeof(test));
+	return sizeof(test);
+*/
+	struct timespec ts;
+	clock_gettime(CLOCK_REALTIME, &ts);
+	struct tm *my_tm = localtime(&ts.tv_sec);
+	buf[0] = 0x5a;
+	buf[1] = 0xa5;
+	buf[2] = 0x08;
+	buf[3] = 0x02;
+	buf[4] = (uint8_t)my_tm->tm_year-100;
+	buf[5] = (uint8_t)my_tm->tm_mon;
+	buf[6] = (uint8_t)my_tm->tm_mday;
+	buf[7] = (uint8_t)my_tm->tm_hour;
+	buf[8] = (uint8_t)my_tm->tm_min;
+	buf[9] = (uint8_t)my_tm->tm_sec;
+	buf[10] = calc_crc(buf+2, 10-2);
+	return 11;
+}
+
+
+
