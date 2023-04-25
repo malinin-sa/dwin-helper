@@ -16,11 +16,12 @@
 #include "dwinserial.h"
 #include "gpiopoll.h"
 #include "time.h"
+#include <sys/stat.h>
 
 #define MODEM "/dev/ttyS5"
 #define BAUDRATE B115200
 
-touch ts;
+touch *ts;
 bool time_is_set=false;
 
 timespec maketime(uint Year, uint Month, uint Day, uint Hour, uint Minute, uint Second){
@@ -68,14 +69,54 @@ void process_data(dwin_serial *instance, DATA_TYPE type){
 	}
 		break;
 	case TOUCH:
-		ts.event(instance->get_x(), instance->get_y(), instance->is_touched());
+		ts->event(instance->get_x(), instance->get_y(), instance->is_touched());
 		break;
 	}
 }
 
+void demonise(){
+	//http://infohost.nmt.edu/~eweiss/222_book/222_book/0201433079/ch13lev1sec3.html#ch13fig01
+//		if (isdaemon > 0) {
+			pid_t pid, sid;
 
+			pid = fork();
+			if (pid < 0) {
+				perror("Daemonize: first fork() failed");
+				exit(EXIT_FAILURE);
+			}
+
+			if (pid > 0)
+				exit(EXIT_SUCCESS); // Parent process exites
+
+			//игнорируем сигналы на
+			signal(SIGTSTP, SIG_IGN);	//остановку с терминала (Crl+Z)
+			signal(SIGTTOU, SIG_IGN);//попытку записи на терминал фоновым процессом
+			signal(SIGTTIN, SIG_IGN);//попытку чтения с терминала фоновым процессом
+			signal(SIGHUP, SIG_IGN);	//закрытие терминала
+
+			umask(0);
+
+			sid = setsid();
+			if (sid < 0) {
+				perror("Daemonize: setsid() failed");
+				exit(EXIT_FAILURE);
+			}
+
+			if ((chdir("/")) < 0) {
+				perror("Daemonize: chdir() failed");
+				exit(EXIT_FAILURE);
+			}
+
+			//перенаправляем стандартный ввод/вывод в null
+			freopen("/dev/null", "r", stdin);
+			freopen("/dev/null", "w", stdout);
+			freopen("/dev/null", "w", stderr);
+//		} // isdaemon
+}
 
 int main(int argc,char** argv){
+	demonise();
+	ts = new touch();
 	serial *port = new serial(MODEM, 115200, 'n', true, false, 100, 10);
 //	port->debug = true;
 	dwin_serial *ds = new dwin_serial();
